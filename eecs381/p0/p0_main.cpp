@@ -3,6 +3,7 @@
 #include <regex>
 #include <string>
 
+
 #include "Record.h"
 #include "Collection.h"
 #include "Catalog.h"
@@ -16,7 +17,14 @@ using std::endl;
 inline bool getInt(std::istream &is, int &res)
 {
 	is >> res;
-	return not is.fail();
+	if (is.fail()) {
+		is.clear();
+		is.ignore(INT_MAX, '\n');
+		cout << "Could not read an integer value!" << endl;
+		return false;
+	}
+	return true;
+	
 }
 
 inline bool getTitle(std::istream &is, std::string &res)
@@ -24,7 +32,14 @@ inline bool getTitle(std::istream &is, std::string &res)
 	std::getline(is, res);
 	res = std::regex_replace(res, std::regex("^ +| +$"), "");
 	res = std::regex_replace(res, std::regex("( ) +"), "$1");
-	return res.size() != 0;
+	if (res.size() == 0)
+	{
+		is.clear();
+		is.ignore(INT_MAX, '\n');
+		cout << "Could not read a title!" << endl;
+		return false;
+	}
+	return true;
 }
 
 // find record
@@ -32,11 +47,10 @@ void cmd_fr(std::istream& is, Library &lib)
 {
 	std::string title;
 	if (not getTitle(is, title)) {
-		// TODO errmsg
 		return;
 	}
 	if (not lib.contains(title)) {
-		// TODO errmsg
+		cout << "No record with that title!" << endl;
 		return;
 	}
 	Record& rec = lib.getRecord(title);
@@ -50,6 +64,10 @@ void cmd_pr(std::istream& is, Library &lib)
 	if (not getInt(is, recordID)) {
 		return;
 	}
+	if (not lib.contains(recordID)) {
+		cout << "No record with that ID!" << endl;
+		return;
+	}
 	Record& rec = lib.getRecord(recordID);
 	cout << rec;
 }
@@ -61,7 +79,7 @@ void cmd_pc(std::istream &is, Catalog &cat)
 	is >> name;
 
 	if (not cat.contains(name)) {
-		// TODO errmsg
+		cout << "No collection with that name!" << endl;
 		return;
 	}
 	Collection& col = cat.getCollection(name);
@@ -71,6 +89,7 @@ void cmd_pc(std::istream &is, Catalog &cat)
 // print Library
 void cmd_pL(Library &lib)
 {
+
 	cout << lib;
 }
 
@@ -97,7 +116,7 @@ void cmd_ar(std::istream &is, Library &lib)
 		return;
 	}
 	if (lib.contains(title)) {
-		// TODO errmsg
+		cout << "Library already has a record with this title!" << endl;
 		return;
 	}
 	lib.addRecord(title, medium);
@@ -109,7 +128,7 @@ void cmd_ac(std::istream& is, Catalog& cat)
 	std::string name;
 	is >> name;
 	if (cat.contains(name)) {
-		//TODO errmsg
+		cout << "Catalog already has a collection with this name!" << endl;
 		return;
 	}
 	cat.addCollection(name);
@@ -127,15 +146,20 @@ void cmd_am(std::istream& is, Library &lib, Catalog &cat)
 		return;
 	}
 	if (not cat.contains(name)) {
-		// TODO errmsg
+		cout << "No record with that ID!" << endl;
 		return;
 	}
 	if (not lib.contains(recordID)) {
-		// TODO errmsg
+		cout << "Record is already a member in the collection!" << endl;
 		return;
 	}
 	Record& rec = lib.getRecord(recordID);
 	Collection& col = cat.getCollection(name);
+	if (col.contains(recordID)) {
+		cout << "Record is already a member in the collection!" << endl;
+		return;
+	}
+
 	col.addMember(rec);
 	cout << "Member " << rec.getId() << " " << rec.getTitle() << " added" << endl;
 
@@ -152,7 +176,11 @@ void cmd_mr(std::istream &is, Library &lib)
 		return;
 	}
 	if (rating < 1 || rating > 5) {
-		// TODO errmsg
+		cout << "Rating is out of range!" << endl;
+		return;
+	}
+	if (not lib.contains(recordID)) {
+		cout << "Record is already a member in the collection!" << endl;
 		return;
 	}
 	Record &rec = lib.getRecord(recordID);
@@ -169,14 +197,15 @@ void cmd_dr(std::istream &is, Library &lib, Catalog &cat)
 	}
 
 	if (not lib.contains(title)) {
-		// TODO errmsg
+		
+		cout << "No record with that title!" << endl;
 		return;
 	}
 
 	Record& rec = lib.getRecord(title);
 
 	if (cat.recordIsReferred(rec.getId())) {
-		// TODO errmsg
+		cout << "Cannot delete a record that is a member of a collection!" << endl;
 		return;
 	}
 
@@ -190,7 +219,7 @@ void cmd_dc(std::istream &is, Catalog &cat)
 	is >> name;
 
 	if (not cat.contains(name)) {
-		// TODO errmsg
+		cout << "No collection with that name!" << endl;
 		return;
 	}
 
@@ -209,24 +238,33 @@ void cmd_dm(std::istream &is, Library &lib, Catalog &cat)
 	}
 
 	if (not lib.contains(recordID)) {
-		// TODO errmsg
+		cout << "No record with that ID!" << endl;
 		return;
 	}
 
 	if (not cat.contains(name)) {
-		// TODO errmsg
+		cout << "Record is not a member in the collection!" << endl;
 		return;
 	}
 	Record& rec = lib.getRecord(recordID);
 	Collection& col = cat.getCollection(name);
+	if (not col.contains(name)) {
+		cout << "Record is not a member in the collection!" << endl;
+		return;
+	}
 	std::string title = rec.getTitle();
 	col.deleteMember(title);
 
 	cout << "Member " << recordID << " " << title << " deleted" << endl;
 }
 
-void cmd_cL(Library &lib)
+void cmd_cL(Library &lib, Catalog &cat)
 {
+
+	if (cat.hasRecordReferred()) {
+		cout << "Cannot clear all records unless all collections are empty!" << endl;
+		return;
+	}
 	lib.clear();
 	cout << "All records deleted" << endl;
 }
@@ -249,6 +287,12 @@ void cmd_sA(std::istream& is, Library &lib, Catalog &cat)
 	std::string filename;
 	is >> filename;
 	std::ofstream ofs(filename);
+	if (not ofs.is_open()) {
+		is.clear();
+		is.ignore(INT_MAX, '\n');
+		cout << "Could not open file!" << endl;
+		return;
+	}
 	ofs << lib;
 	ofs << cat;
 	ofs.close();
@@ -260,9 +304,22 @@ void cmd_rA(std::istream& is, Library &lib, Catalog &cat)
 	std::string filename;
 	is >> filename;
 	std::ifstream ifs(filename);
+	if (not ifs.is_open()) {
+		cout << "Could not open file!" << endl;
+		is.clear();
+		is.ignore(INT_MAX, '\n');
+		return;
+	}
 	ifs >> lib;
-
+	if (ifs.fail()) {
+		cout << "Invalid data found in file!" << endl;
+		return;
+	}
 	ifs >> cat;
+	if (ifs.fail()) {
+		cout << "Invalid data found in file!" << endl;
+		return;
+	}
 	ifs.close();
 	cout << "Data loaded" << endl;
 }
@@ -284,7 +341,7 @@ int main()
 		} else if (cmd == "cC") {
 			cmd_cC(catalog);
 		} else if (cmd == "cL") {
-			cmd_cL(library);
+			cmd_cL(library, catalog);
 		} else if (cmd == "dr") {
 			cmd_dr(std::cin, library, catalog);
 		} else if (cmd == "dc") {
@@ -320,6 +377,8 @@ int main()
 			break;
 		}
 		 else {
+		 	
+			std::cin.ignore(INT_MAX, '\n');
 			cout << "Unrecognized command!" << endl;
 		}
 	}

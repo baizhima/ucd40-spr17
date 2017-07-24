@@ -41,16 +41,31 @@ bool Catalog::recordIsReferred(int recordID) const
 	return false;
 }
 
+bool Catalog::hasRecordReferred() const
+{
+	for (auto &it: collections_) {
+		if (it.second.getNumOfRecords() != 0) {
+			return true;
+		}
+	}
+	return false;
+}
 
 std::istream & operator>>(std::istream& is, Catalog &cat)
 {
 	cat.clear();
 	int cnt;
 	is >> cnt;
+	if (is.fail()) {
+		return is;
+	}
 	for (int i = 0; i < cnt; i++) {
 		std::string name;
 		int numRecs;
 		is >> name >> numRecs;
+		if (is.fail()) {
+			return is;
+		}
 		is.get(); // '\n'
 		cat.addCollection(name);
 		Collection &col = cat.getCollection(name);

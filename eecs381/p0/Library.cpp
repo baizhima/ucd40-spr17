@@ -54,10 +54,17 @@ std::istream & operator>>(std::istream &is, Library &lib)
 {
 	lib.clear();
 	int cnt;
+
 	is >> cnt;
+	if (is.fail()) {
+		return is;
+	}
 	for (int i = 0; i < cnt; i++) {
 		Record rec;
 		is >> rec;
+		if (is.fail()) {
+			return is;
+		}
 		lib.loadRecord(rec);
 	}
 	return is;

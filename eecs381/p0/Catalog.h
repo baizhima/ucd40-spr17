@@ -17,6 +17,8 @@ public:
 	void clear();
 
 	Collection & getCollection(std::string& name);
+
+	bool hasRecordReferred() const;
 	
 	bool contains(std::string &name) 			const { return collections_.find(name) != collections_.end(); }
 	bool recordIsReferred(int recordID)		 	const ;
@@ -29,6 +31,7 @@ public:
 private:
 	Library *lib_;
 	std::map<std::string, Collection> collections_;
+	
 };
 
 #endif

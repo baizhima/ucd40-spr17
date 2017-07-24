@@ -10,8 +10,14 @@ using std::endl;
 std::istream & operator>>(std::istream &is, Record &rec)
 {
 	is >> rec.id_;
+	if (is.fail()) {
+		return is;
+	}
 	is >> rec.medium_;
 	is >> rec.rating_;
+	if (is.fail()) {
+		return is;
+	}
 	std::string line;
 	std::getline(is, line);
 	rec.title_ = line.substr(1);

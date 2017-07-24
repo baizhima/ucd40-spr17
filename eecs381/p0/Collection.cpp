@@ -17,10 +17,7 @@ bool Collection::contains(int recordID) const
 }
 
 
-std::istream & operator>>(std::istream &is, Collection &col)
-{
-	return is;
-}
+
 
 std::ostream & operator<<(std::ostream &os, const Collection &col)
 {
